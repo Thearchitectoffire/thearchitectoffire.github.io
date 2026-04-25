@@ -10,10 +10,10 @@
 body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#e0e0e0;overflow-x:hidden}
 ::selection{background:#FF4500;color:white}
 
-/* PARTICLES */
-.particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
-.particle{position:absolute;background:radial-gradient(circle,#FF4500 0%,transparent 70%);border-radius:50%;opacity:0;animation:float linear infinite}
-@keyframes float{0%{opacity:0;transform:translateY(100vh) scale(0)}10%{opacity:.6}90%{opacity:.2}100%{opacity:0;transform:translateY(-20vh) scale(1)}}
+/* PERLIN NOISE VISUALIZER */
+#perlin-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;opacity:0.15;pointer-events:none;transition:opacity 2s ease}
+/* Keep old particle class for fallback but hidden */
+.particles{display:none}
 
 /* LAYOUT */
 section{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 24px}
@@ -59,14 +59,20 @@ section{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 2
 footer{text-align:center;padding:40px 24px;color:#444;font-size:.85em;border-top:1px solid #1a1a1a;margin-top:60px}
 footer a{color:#FF4500;text-decoration:none}
 
+/* Transparent backgrounds so visualizer shows through */
+.card{background:rgba(20,20,20,0.75) !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.quote{background:rgba(17,17,17,0.75) !important;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.connect-item{background:rgba(20,20,20,0.75) !important;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.subscribe-section{background:rgba(17,17,17,0.8) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 /* DIVIDER */
 .divider{width:60px;height:3px;background:linear-gradient(90deg,#FF4500,#FFD700);margin:60px auto;border-radius:2px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 </head>
 <body>
 
-<!-- PARTICLES -->
-<div class="particles" id="particles"></div>
+<!-- PERLIN NOISE VISUALIZER -->
+<div id="perlin-bg"></div>
 
 <!-- HERO -->
 <section class="hero">
@@ -255,22 +261,56 @@ footer a{color:#FF4500;text-decoration:none}
 </footer>
 
 <script>
-// Particle system
-const container = document.getElementById('particles');
-function createParticle() {
-  const p = document.createElement('div');
-  p.className = 'particle';
-  const size = Math.random() * 4 + 2;
-  p.style.width = size + 'px';
-  p.style.height = size + 'px';
-  p.style.left = Math.random() * 100 + '%';
-  p.style.animationDuration = (Math.random() * 6 + 4) + 's';
-  p.style.animationDelay = (Math.random() * 4) + 's';
-  container.appendChild(p);
-  setTimeout(() => p.remove(), 12000);
-}
-setInterval(createParticle, 300);
-for (let i = 0; i < 20; i++) setTimeout(createParticle, i * 150);
+// Perlin Noise Organic Fractal Visualizer
+(function() {
+  const sketch = function(p) {
+    let t = 0;
+    p.setup = function() {
+      let cnv = p.createCanvas(p.windowWidth, p.windowHeight);
+      cnv.parent('perlin-bg');
+      p.noFill();
+      p.strokeWeight(1.5);
+      p.background(10, 10, 10);
+    };
+    p.draw = function() {
+      p.background(10, 10, 10, 25);
+      p.translate(p.width / 2, p.height / 2);
+      for (let i = 0; i < 8; i++) {
+        p.push();
+        p.rotate(t * 0.2 + (i * p.QUARTER_PI));
+        p.stroke(
+          p.map(p.noise(t + i), 0, 1, 0, 50),
+          p.map(p.noise(t + i + 10), 0, 1, 200, 255),
+          p.map(p.noise(t + i + 20), 0, 1, 150, 255)
+        );
+        p.beginShape();
+        for (let angle = 0; angle < p.TWO_PI; angle += p.TWO_PI / 100) {
+          let xoff = p.map(p.cos(angle), -1, 1, 0, 2);
+          let yoff = p.map(p.sin(angle), -1, 1, 0, 2);
+          let r = p.map(p.noise(xoff + t, yoff + t, i * 0.5), 0, 1, 50, Math.min(p.width, p.height) * 0.45);
+          let x = r * p.cos(angle);
+          let y = r * p.sin(angle);
+          p.vertex(x, y);
+        }
+        p.endShape(p.CLOSE);
+        p.pop();
+      }
+      t += 0.003;
+    };
+    p.windowResized = function() {
+      p.resizeCanvas(p.windowWidth, p.windowHeight);
+      p.background(10, 10, 10);
+    };
+  };
+  new p5(sketch);
+
+  // Intensify on scroll
+  window.addEventListener('scroll', function() {
+    const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+    const el = document.getElementById('perlin-bg');
+    if (el) el.style.opacity = (0.15 + pct * 0.15).toFixed(3);
+  });
+})();
 </script>
 <!-- NEWSLETTER SIGNUP -->
 <section class="subscribe-section" style="text-align:center;padding:40px 24px;background:#111;margin-top:40px;border-top:1px solid #222;">
